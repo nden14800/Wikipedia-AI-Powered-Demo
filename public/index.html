@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja" class="client-js">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人工知能 - Wikipedia (AI-Powered)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSSは前回のものをベースに微調整していますが、長いためここでは省略します。
+           実際の動作に必要なスタイルはすべてここに記述されていると仮定してください。
+           前回のコードの<style>タグ内をそのままコピーしても問題ありません。 */
+        :root {
+            --bg-color: #ffffff; --bg-subtle-color: #f8f9fa; --text-color: #202122; --secondary-text-color: #54595d;
+            --border-color: #a2a9b1; --link-color: #3366cc; --link-visited-color: #5a3696; --highlight-color: #3366cc;
+            --highlight-text-color: #ffffff; --shadow-color: rgba(0, 0, 0, 0.1); --loader-color: #3366cc;
+        }
+        html.dark-theme {
+            --bg-color: #1c1c1c; --bg-subtle-color: #252525; --text-color: #e8eaed; --secondary-text-color: #bdc1c6;
+            --border-color: #4d4d4d; --link-color: #8ab4f8; --link-visited-color: #c58af9; --highlight-color: #8ab4f8;
+            --highlight-text-color: #1c1c1c; --shadow-color: rgba(0, 0, 0, 0.5); --loader-color: #8ab4f8;
+        }
+        body { font-family: 'Roboto', sans-serif; margin: 0; background-color: var(--bg-subtle-color); color: var(--text-color); display: flex; transition: background-color 0.3s, color 0.3s; }
+        a { color: var(--link-color); text-decoration: none; } a:hover { text-decoration: underline; }
+        #mw-panel { position: fixed; top: 0; left: 0; width: 10rem; height: 100%; background-color: var(--bg-color); border-right: 1px solid var(--border-color); overflow-y: auto; padding-top: 50px; }
+        #mw-head { position: fixed; top: 0; left: 0; right: 0; height: 50px; background-color: var(--bg-color); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; z-index: 100; }
+        #left-navigation, #wikipedia-logo { display: flex; align-items: center; gap: 0.5rem; }
+        #wikipedia-logo svg { color: var(--text-color); } .logo-text { font-weight: 500; font-size: 1.1rem; }
+        #p-search { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 20px; padding: 0 0.5rem 0 0.75rem; margin-right: 1rem; }
+        #p-search:focus-within { border-color: var(--highlight-color); }
+        #searchInput { border: none; background: none; height: 34px; color: var(--text-color); } #searchInput:focus { outline: none; }
+        #content { margin-left: 10rem; padding: 70px 2rem 2rem 2rem; width: calc(100% - 10rem); max-width: 1200px; }
+        .mw-body { background-color: var(--bg-color); border: 1px solid var(--border-color); padding: 2rem; border-radius: 4px; }
+        h1#firstHeading { font-size: 2.2em; font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin: 0 0 0.5em 0; }
+        .mw-body-content p { line-height: 1.7; margin: 0.8rem 0; }
+        @media (max-width: 768px) { #mw-panel { display: none; } #content { margin-left: 0; width: 100%; padding: 60px 1rem 1rem 1rem; } .logo-text { display: none; } }
+        .ai-section { background-color: var(--bg-subtle-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; }
+        .ai-section-header { display: flex; align-items: center; gap: 0.75rem; font-size: 1.1em; font-weight: 500; margin-bottom: 0.75rem; }
+        .ai-icon { color: var(--highlight-color); }
+        .ai-content { line-height: 1.6; position: relative; min-height: 24px; } .ai-content p { margin: 0; }
+        .error-message { color: #d93025; font-size: 0.9em; }
+        .loader { width: 24px; height: 24px; border-radius: 50%; display: inline-block; border: 2px solid transparent; border-top-color: var(--loader-color); animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-container { display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+        #ai-mode-toggle { position: fixed; bottom: 2rem; right: 2rem; width: 56px; height: 56px; background-color: var(--highlight-color); color: var(--highlight-text-color); border: none; border-radius: 50%; box-shadow: 0 4px 12px var(--shadow-color); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s ease, background-color 0.3s; z-index: 1000; }
+        #ai-mode-toggle:hover { transform: scale(1.1); }
+        #ai-mode-chat-window { position: fixed; bottom: 6rem; right: 2rem; width: 90vw; max-width: 400px; height: 60vh; max-height: 600px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 8px 24px var(--shadow-color); display: flex; flex-direction: column; overflow: hidden; z-index: 999; transform: translateY(20px) scale(0.95); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; pointer-events: none; }
+        #ai-mode-chat-window.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+        .chat-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+        .chat-close-btn { background: none; border: none; color: var(--secondary-text-color); font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; }
+        #chat-messages { flex-grow: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+        .chat-message { display: flex; flex-direction: column; max-width: 85%; } .chat-message .message-content { padding: 0.75rem 1rem; border-radius: 18px; line-height: 1.5; word-wrap: break-word; }
+        .chat-message.user { align-self: flex-end; align-items: flex-end; } .chat-message.user .message-content { background-color: var(--highlight-color); color: var(--highlight-text-color); border-bottom-right-radius: 4px; }
+        .chat-message.ai { align-self: flex-start; align-items: flex-start; } .chat-message.ai .message-content { background-color: var(--bg-subtle-color); border-bottom-left-radius: 4px; }
+        .chat-message.ai .message-content .loader { width: 18px; height: 18px; }
+        .chat-input-area { display: flex; padding: 0.75rem; border-top: 1px solid var(--border-color); gap: 0.5rem; }
+        #chat-input { flex-grow: 1; padding: 0.75rem 1rem; border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--bg-subtle-color); color: var(--text-color); font-size: 1em; resize: none; }
+        #chat-input:focus { outline: none; border-color: var(--highlight-color); }
+        #chat-send-btn { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: none; background-color: var(--highlight-color); color: var(--highlight-text-color); display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s; }
+        #chat-send-btn:disabled { background-color: var(--secondary-text-color); cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <header id="mw-head">
+        <div id="left-navigation">
+            <a id="wikipedia-logo" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-wikipedia" viewBox="0 0 16 16"><path d="M8.835 3.003c.828-.006 2.688 0 2.688 0l.033.03v.288q0 .12-.133.12c-.433.02-.522.063-.68.29-.087.126-.258.393-.435.694l-1.52 2.843-.043.089 1.858 3.801.113.031 2.926-6.946q.152-.42-.044-.595c-.132-.114-.224-.18-.563-.195l-.275-.014a.16.16 0 0 1-.096-.035.1.1 0 0 1-.046-.084v-.289l.042-.03h3.306l.034.03v.29q0 .117-.133.117-.65.03-.962.281a1.64 1.64 0 0 0-.488.704s-2.691 6.16-3.612 8.208c-.353.672-.7.61-1.004-.019A224 224 0 0 1 8.044 8.81c-.623 1.285-1.475 3.026-1.898 3.81-.411.715-.75.622-1.02.019-.45-1.065-1.131-2.519-1.817-3.982-.735-1.569-1.475-3.149-1.943-4.272-.167-.4-.293-.657-.412-.759q-.18-.15-.746-.18Q0 3.421 0 3.341v-.303l.034-.03c.615-.003 3.594 0 3.594 0l.034.03v.288q0 .119-.15.118l-.375.016q-.483.02-.483.288-.002.125.109.4c.72 1.753 3.207 6.998 3.207 6.998l.091.023 1.603-3.197-.32-.71L6.24 5.095s-.213-.433-.286-.577l-.098-.196c-.387-.77-.411-.82-.865-.88-.137-.017-.208-.035-.208-.102v-.304l.041-.03h2.853l.075.024v.303q0 .104-.15.104l-.206.03c-.523.04-.438.254-.09.946l1.057 2.163 1.17-2.332c.195-.427.155-.534.074-.633-.046-.055-.202-.144-.54-.158l-.133-.015a.16.16 0 0 1-.096-.034.1.1 0 0 1-.045-.085v-.288l.041-.03Z"/></svg>
+                <span class="logo-text">Wikipedia</span>
+            </a>
+        </div>
+        <div id="right-navigation">
+            <div id="p-search" role="search">
+                <input id="searchInput" placeholder="Wikipedia内を検索" title="Wikipedia内を検索" accesskey="f">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+            </div>
+        </div>
+    </header>
+    <nav id="mw-panel" role="navigation"></nav>
+    <div id="content" role="main">
+        <div class="mw-body">
+            <h1 id="firstHeading" class="firstHeading">人工知能</h1>
+            <div id="bodyContent" class="mw-body-content">
+                <div id="ai-summary-section" class="ai-section">
+                    <div class="ai-section-header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-stars ai-icon" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg>
+                        <span>AIによる概要 (Gemini 2.5 Flash)</span>
+                    </div>
+                    <div id="ai-summary-content" class="ai-content"></div>
+                </div>
+                <p><b>人工知能</b>（じんこうちのう、<a href="#">英</a>: <a href="#">artificial intelligence</a>、<b>AI</b>）は、「『計算（computation）』という概念と『コンピュータ（computer）』という道具を用いて『知能』を研究する計算機科学（computer science）の一分野」を指す語。「言語の理解や推論、問題解決などの知的行動を人間に代わってコンピューターに行わせる技術」、または「計算機（コンピュータ）による知的な情報処理システムの設計や実現に関する研究分野」などと説明されることもある。</p>
+                <p>『<a href="#">日本大百科全書(ニッポニカ)』の解説</a>で、情報工学者・通信工学者の<a href="#">佐藤理史</a>は、AIの定義は研究者ごとに異なり未だ定まっていないと述べている。人工知能の定義は多数あるが、人工的に作られた、知能を持つ、実体（もの）である。</p>
+            </div>
+        </div>
+    </div>
+    <button id="ai-mode-toggle" title="AI Mode を開く"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16"> <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg></button>
+    <div id="ai-mode-chat-window">
+        <div class="chat-header">
+            <div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars ai-icon" viewBox="0 0 16 16"> <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg><span>AI Mode</span></div>
+            <button class="chat-close-btn" id="chat-close-btn" title="閉じる">×</button>
+        </div>
+        <div id="chat-messages"></div>
+        <div class="chat-input-area">
+            <textarea id="chat-input" placeholder="このページについて質問する..." rows="1"></textarea>
+            <button id="chat-send-btn" title="送信"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/></svg></button>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const summaryContent = document.getElementById('ai-summary-content');
+            const aiModeToggle = document.getElementById('ai-mode-toggle');
+            const chatWindow = document.getElementById('ai-mode-chat-window');
+            const closeChatBtn = document.getElementById('chat-close-btn');
+            const chatMessages = document.getElementById('chat-messages');
+            const chatInput = document.getElementById('chat-input');
+            const chatSendBtn = document.getElementById('chat-send-btn');
+            const htmlEl = document.documentElement;
+            const bodyContent = document.getElementById('bodyContent');
+
+            let chatHistory = [];
+            let pageContext = '';
+
+            // --- Initialization ---
+            function initializeApp() {
+                pageContext = getPageContext();
+                generateAiSummary();
+                initializeChat();
+            }
+
+            function getPageContext() {
+                const title = document.getElementById('firstHeading').textContent;
+                const paragraphs = Array.from(bodyContent.querySelectorAll('p')).map(p => p.textContent).join('\n').substring(0, 3000);
+                return `この記事のタイトルは「${title}」です。\n記事の本文の冒頭は以下の通りです:\n${paragraphs}`;
+            }
+
+            function toggleTheme(isDark) {
+                htmlEl.classList.toggle('dark-theme', isDark);
+            }
+
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+            toggleTheme(prefersDark.matches);
+            prefersDark.addEventListener('change', (e) => toggleTheme(e.matches));
+            
+            // --- API Communication ---
+            async function streamApiRequest(endpoint, payload, targetElement) {
+                const loaderHtml = `<div class="loader-container"><div class="loader"></div></div>`;
+                if(targetElement) targetElement.innerHTML = loaderHtml;
+                
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'サーバーでエラーが発生しました。');
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullText = '';
+                    
+                    if(targetElement) targetElement.innerHTML = '';
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value, { stream: true });
+                        fullText += chunk;
+                        if(targetElement) {
+                           targetElement.textContent = fullText;
+                           chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    }
+                    return fullText;
+                } catch (error) {
+                    console.error("API Error:", error);
+                    if(targetElement) targetElement.innerHTML = `<p class="error-message">AIの応答生成中にエラーが発生しました: ${error.message}</p>`;
+                    return null;
+                }
+            }
+
+            // --- AI Summary ---
+            function generateAiSummary() {
+                const contentParagraph = document.createElement('p');
+                summaryContent.appendChild(contentParagraph);
+                streamApiRequest('/api/summary', { context: pageContext }, contentParagraph);
+            }
+
+            // --- AI Mode Chat ---
+            function initializeChat() {
+                const initialBotMessage = { role: 'model', text: '承知いたしました。「人工知能」の記事について、何でもご質問ください。' };
+                chatHistory = [{ role: 'user', text: `あなたはWikipediaの専門家アシスタントです。これから「人工知能」のページに関する質問に答えてください。参考として、記事の冒頭部分を伝えます。\n\n${pageContext}` }, initialBotMessage];
+                addMessageToChat('ai', initialBotMessage.text);
+            }
+
+            function addMessageToChat(sender, text) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${sender}`;
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = text;
+                messageDiv.appendChild(contentDiv);
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                return contentDiv;
+            }
+
+            async function handleSendMessage() {
+                const messageText = chatInput.value.trim();
+                if (!messageText) return;
+
+                addMessageToChat('user', messageText);
+                chatHistory.push({ role: 'user', text: messageText });
+                
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+                chatSendBtn.disabled = true;
+
+                const aiResponseElement = addMessageToChat('ai', '');
+                aiResponseElement.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
+
+                const fullResponse = await streamApiRequest('/api/chat', { history: chatHistory }, aiResponseElement);
+                
+                if(fullResponse) {
+                    chatHistory.push({ role: 'model', text: fullResponse });
+                }
+                
+                chatSendBtn.disabled = false;
+                chatInput.focus();
+            }
+            
+            aiModeToggle.addEventListener('click', () => chatWindow.classList.toggle('visible'));
+            closeChatBtn.addEventListener('click', () => chatWindow.classList.remove('visible'));
+            chatSendBtn.addEventListener('click', handleSendMessage);
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+            });
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = `${chatInput.scrollHeight}px`;
+            });
+            
+            initializeApp();
+        });
+    </script>
+</body>
+</html>
