@@ -28,21 +28,12 @@ const model = genAI.getGenerativeModel({
 });
 
 // ストリーミングレスポンスを処理する共通関数
-async function streamToClient(res, prompt) {
-    try {
-        const result = await model.generateContentStream(prompt);
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        
-        for await (const chunk of result.stream) {
-            if (chunk && typeof chunk.text === 'function') {
-                res.write(chunk.text());
-            }
+async function streamToClient(res, resultStream) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    for await (const chunk of resultStream) {
+        if (chunk && typeof chunk.text === 'function') {
+            res.write(chunk.text());
         }
-    } catch (error) {
-        console.error("Gemini API Error:", error);
-        res.status(500).json({ error: "AIモデルとの通信中にエラーが発生しました。" });
-    } finally {
-        res.end();
     }
 }
 
@@ -53,14 +44,23 @@ app.post('/api/summary', async (req, res) => {
         return res.status(400).json({ error: "記事のコンテキストが必要です。" });
     }
     const prompt = `あなたはWikipediaの編集アシスタントです。以下の記事の冒頭部分を読み、記事全体の内容を3〜4文で簡潔かつ正確に要約してください。\n\n---\n${context}\n---`;
-    await streamToClient(res, prompt);
+    
+    try {
+        const result = await model.generateContentStream(prompt);
+        await streamToClient(res, result.stream);
+    } catch (error) {
+        console.error("Gemini Summary API Error:", error);
+        res.status(500).json({ error: "AIモデルとの通信中にエラーが発生しました。" });
+    } finally {
+        res.end();
+    }
 });
 
-// チャット用のAPIエンドポイント
+// チャット用のAPIエンドポイント (修正箇所)
 app.post('/api/chat', async (req, res) => {
     const { history } = req.body;
-    if (!history || !Array.isArray(history)) {
-        return res.status(400).json({ error: "チャット履歴が必要です。" });
+    if (!history || !Array.isArray(history) || history.length === 0) {
+        return res.status(400).json({ error: "チャット履歴が不正です。" });
     }
 
     // Google AI SDKが要求する形式に変換
@@ -68,29 +68,37 @@ app.post('/api/chat', async (req, res) => {
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
     }));
-    
-    // 最後のメッセージをプロンプトとして取り出す
-    const lastMessage = formattedHistory.pop();
 
     try {
-        const chat = model.startChat({ history: formattedHistory });
-        const result = await chat.sendMessageStream(lastMessage.parts[0].text);
+        // 全ての履歴をコンテキストとして渡し、最後のメッセージをプロンプトとして送信する
+        // SDKが内部で履歴を適切に管理してくれる
+        const chat = model.startChat({ history: formattedHistory.slice(0, -1) }); // 最後のメッセージを除いた履歴で初期化
+        const lastMessage = formattedHistory[formattedHistory.length - 1]; // 最後のメッセージを取得
 
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        for await (const chunk of result.stream) {
-            if (chunk && typeof chunk.text === 'function') {
-                res.write(chunk.text());
-            }
-        }
+        const result = await chat.sendMessageStream(lastMessage.parts[0].text);
+        
+        await streamToClient(res, result.stream);
+
     } catch (error) {
+        // エラーメッセージに詳細を含める
         console.error("Gemini Chat API Error:", error);
-        res.status(500).json({ error: "AIモデルとの通信中にエラーが発生しました。" });
+        const errorMessage = error.message || "不明なエラー";
+        if (errorMessage.includes("did not match the expected pattern")) {
+            res.status(400).json({ error: "チャット履歴の形式が不正です。リロードしてください。" });
+        } else {
+            res.status(500).json({ error: `AIモデルとの通信中にエラーが発生しました: ${errorMessage}` });
+        }
     } finally {
-        res.end();
+        if (!res.headersSent) {
+            res.end();
+        }
     }
 });
 
 
+app.listen(port, () => {
+    console.log(`サーバーが http://localhost:${port} で起動しました`);
+});
 app.listen(port, () => {
     console.log(`サーバーが http://localhost:${port} で起動しました`);
 });
