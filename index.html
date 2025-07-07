@@ -116,7 +116,6 @@
             </footer>
         </div>
     </div>
-    <!-- ★変更点: SVGのwidthとheightを32に変更 -->
     <button id="ai-mode-toggle" title="AI Mode を開く"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16"> <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg></button>
     <div id="ai-mode-chat-window">
         <div class="chat-header">
@@ -157,8 +156,10 @@
             '特別ページ一覧': 'https://ja.wikipedia.org/wiki/特別:特別ページ一覧' 
         };
         const apiKeyModal = document.getElementById('api-key-modal'), apiKeyInput = document.getElementById('api-key-input'), saveApiKeyBtn = document.getElementById('save-api-key-btn'), apiKeyError = document.getElementById('api-key-error'), aiModeToggle = document.getElementById('ai-mode-toggle'), chatWindow = document.getElementById('ai-mode-chat-window'), closeChatBtn = document.getElementById('chat-close-btn'), chatMessages = document.getElementById('chat-messages'), chatInput = document.getElementById('chat-input'), chatSendBtn = document.getElementById('chat-send-btn'), fullscreenBtn = document.getElementById('fullscreen-btn'), clearChatBtn = document.getElementById('clear-chat-btn'), htmlEl = document.documentElement, mainContent = document.getElementById('content'), bodyContent = document.getElementById('bodyContent'), firstHeading = document.getElementById('firstHeading'), articleNavList = document.getElementById('article-navigation-list'), menuToggle = document.getElementById('menu-toggle'), mwPanel = document.getElementById('mw-panel'), searchInput = document.getElementById('searchInput'), searchSuggestions = document.getElementById('search-suggestions'), apiSettingsBtn = document.getElementById('api-settings-btn'), wikipediaLogo = document.getElementById('wikipedia-logo');
-        // ★変更点: 初期表示の記事を'メインページ'に変更
+        
+        // ★変更点：初期表示の記事を「メインページ」に設定
         let genAI, chat, pageContext = '', currentArticleTitle = 'メインページ';
+
         const MODEL_NAME = "gemini-2.5-flash";
         const icons = { fullscreen: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16"><path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5"/></svg>`, exitFullscreen: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen-exit" viewBox="0 0 16 16"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/></svg>`};
         
@@ -326,9 +327,6 @@
             const existingSummary = document.getElementById('ai-summary-section');
             if(existingSummary) existingSummary.remove();
             
-            // "メインページ"ではAI概要を生成しない
-            if (currentArticleTitle === 'メインページ') return;
-
             const summaryContainer = document.createElement('div');
             summaryContainer.id = 'ai-summary-section';
             summaryContainer.className = 'ai-section';
