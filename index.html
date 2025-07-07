@@ -3,101 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>人工知能 - Wikipedia (AI-Powered)</title>
+    <title>Wikipedia (AI-Powered Demo)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* CSSは前回のものをベースに微調整していますが、長いためここでは省略します。
-           実際の動作に必要なスタイルはすべてここに記述されていると仮定してください。
-           前回のコードの<style>タグ内をそのままコピーしても問題ありません。 */
         :root {
             --bg-color: #ffffff; --bg-subtle-color: #f8f9fa; --text-color: #202122; --secondary-text-color: #54595d;
             --border-color: #a2a9b1; --link-color: #3366cc; --link-visited-color: #5a3696; --highlight-color: #3366cc;
-            --highlight-text-color: #ffffff; --shadow-color: rgba(0, 0, 0, 0.1); --loader-color: #3366cc;
+            --highlight-text-color: #ffffff; --shadow-color: rgba(0, 0, 0, 0.1); --loader-color: #202122;
+            --error-color: #d93025; --sidebar-width: 14rem;
         }
         html.dark-theme {
             --bg-color: #1c1c1c; --bg-subtle-color: #252525; --text-color: #e8eaed; --secondary-text-color: #bdc1c6;
             --border-color: #4d4d4d; --link-color: #8ab4f8; --link-visited-color: #c58af9; --highlight-color: #8ab4f8;
-            --highlight-text-color: #1c1c1c; --shadow-color: rgba(0, 0, 0, 0.5); --loader-color: #8ab4f8;
+            --highlight-text-color: #1c1c1c; --shadow-color: rgba(0, 0, 0, 0.5); --loader-color: #e8eaed;
+            --error-color: #f28b82;
         }
         body { font-family: 'Roboto', sans-serif; margin: 0; background-color: var(--bg-subtle-color); color: var(--text-color); display: flex; transition: background-color 0.3s, color 0.3s; }
         a { color: var(--link-color); text-decoration: none; } a:hover { text-decoration: underline; }
-        #mw-panel { position: fixed; top: 0; left: 0; width: 10rem; height: 100%; background-color: var(--bg-color); border-right: 1px solid var(--border-color); overflow-y: auto; padding-top: 50px; }
+        .loader { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--loader-color); animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .chat-message.ai .message-content .loader { width: 18px; height: 18px; }
+        .loader-container { display: flex; flex-direction: column; gap: 1rem; justify-content: center; align-items: center; min-height: 200px; }
+        #mw-panel { position: fixed; top: 0; left: 0; width: var(--sidebar-width); height: 100%; background-color: var(--bg-color); border-right: 1px solid var(--border-color); overflow-y: auto; padding-top: 50px; z-index: 90; transition: transform 0.3s ease; transform: translateX(0); }
+        #mw-panel.hidden { transform: translateX(calc(-1 * var(--sidebar-width))); }
+        #content { margin-left: var(--sidebar-width); padding: 70px 2rem 2rem 2rem; width: calc(100% - var(--sidebar-width)); max-width: none; transition: margin-left 0.3s ease, width 0.3s ease; }
+        #content.full-width { margin-left: 0; width: 100%; }
         #mw-head { position: fixed; top: 0; left: 0; right: 0; height: 50px; background-color: var(--bg-color); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 1rem; z-index: 100; }
+        .mw-body { background-color: var(--bg-color); border: 1px solid var(--border-color); padding: 2rem; border-radius: 4px; max-width: 1200px; margin: 0 auto; }
         #left-navigation, #wikipedia-logo { display: flex; align-items: center; gap: 0.5rem; }
+        #right-navigation { display: flex; align-items: center; gap: 0.5rem; }
         #wikipedia-logo svg { color: var(--text-color); } .logo-text { font-weight: 500; font-size: 1.1rem; }
-        #p-search { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 20px; padding: 0 0.5rem 0 0.75rem; margin-right: 1rem; }
+        #p-search { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 20px; padding: 0 0.5rem 0 0.75rem; position: relative; }
         #p-search:focus-within { border-color: var(--highlight-color); }
         #searchInput { border: none; background: none; height: 34px; color: var(--text-color); } #searchInput:focus { outline: none; }
-        #content { margin-left: 10rem; padding: 70px 2rem 2rem 2rem; width: calc(100% - 10rem); max-width: 1200px; }
-        .mw-body { background-color: var(--bg-color); border: 1px solid var(--border-color); padding: 2rem; border-radius: 4px; }
-        h1#firstHeading { font-size: 2.2em; font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin: 0 0 0.5em 0; }
-        .mw-body-content p { line-height: 1.7; margin: 0.8rem 0; }
-        @media (max-width: 768px) { #mw-panel { display: none; } #content { margin-left: 0; width: 100%; padding: 60px 1rem 1rem 1rem; } .logo-text { display: none; } }
+        #search-suggestions { position: absolute; top: 110%; left: 0; right: 0; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 8px var(--shadow-color); z-index: 110; max-height: 300px; overflow-y: auto; display: none; }
+        .suggestion-item { padding: 0.75rem 1rem; cursor: pointer; } .suggestion-item:hover { background-color: var(--bg-subtle-color); }
+        .portal { padding: 0.5rem 1rem; border-bottom: 1px solid var(--bg-subtle-color); }
+        .portal h3 { font-size: 0.9em; margin: 0.5rem 0; color: var(--secondary-text-color); }
+        .portal ul { list-style: none; padding: 0; margin: 0; }
+        .portal li a { display: block; padding: 0.5rem 0; font-size: 0.95em; cursor: pointer; }
+        .portal li a.active { font-weight: bold; color: var(--highlight-color); }
+        .header-btn { display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; padding: 0.5rem; }
+        .header-btn svg { width: 20px; height: 20px; color: var(--text-color); }
+        #firstHeading { font-size: 2.2em; font-weight: 500; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin: 0 0 0.5em 0; }
+        #bodyContent { line-height: 1.7; }
         .ai-section { background-color: var(--bg-subtle-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.5rem; margin: 1.5rem 0; }
         .ai-section-header { display: flex; align-items: center; gap: 0.75rem; font-size: 1.1em; font-weight: 500; margin-bottom: 0.75rem; }
         .ai-icon { color: var(--highlight-color); }
         .ai-content { line-height: 1.6; position: relative; min-height: 24px; } .ai-content p { margin: 0; }
-        .error-message { color: #d93025; font-size: 0.9em; }
-        .loader { width: 24px; height: 24px; border-radius: 50%; display: inline-block; border: 2px solid transparent; border-top-color: var(--loader-color); animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loader-container { display: flex; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+        .error-message { color: var(--error-color); font-size: 0.9em; }
         #ai-mode-toggle { position: fixed; bottom: 2rem; right: 2rem; width: 56px; height: 56px; background-color: var(--highlight-color); color: var(--highlight-text-color); border: none; border-radius: 50%; box-shadow: 0 4px 12px var(--shadow-color); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.2s ease, background-color 0.3s; z-index: 1000; }
         #ai-mode-toggle:hover { transform: scale(1.1); }
-        #ai-mode-chat-window { position: fixed; bottom: 6rem; right: 2rem; width: 90vw; max-width: 400px; height: 60vh; max-height: 600px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 8px 24px var(--shadow-color); display: flex; flex-direction: column; overflow: hidden; z-index: 999; transform: translateY(20px) scale(0.95); opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; pointer-events: none; }
+        #ai-mode-chat-window { position: fixed; bottom: 6rem; right: 2rem; width: 90vw; max-width: 400px; height: 60vh; max-height: 600px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 8px 24px var(--shadow-color); display: flex; flex-direction: column; overflow: hidden; z-index: 999; transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s ease; pointer-events: none; }
         #ai-mode-chat-window.visible { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+        #ai-mode-chat-window.fullscreen { top: 0; left: 0; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; bottom: 0; right: 0; border-radius: 0; }
         .chat-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
-        .chat-close-btn { background: none; border: none; color: var(--secondary-text-color); font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; }
+        .chat-header-left { display: flex; align-items: center; gap: 0.5rem; }
+        .chat-header-right { display: flex; align-items: center; gap: 0.5rem; }
+        .chat-header-btn { background: none; border: none; color: var(--secondary-text-color); cursor: pointer; padding: 0.25rem; line-height: 1; display: flex; align-items: center; justify-content: center; }
+        #chat-close-btn svg { width: 24px; height: 24px; }
         #chat-messages { flex-grow: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
         .chat-message { display: flex; flex-direction: column; max-width: 85%; } .chat-message .message-content { padding: 0.75rem 1rem; border-radius: 18px; line-height: 1.5; word-wrap: break-word; }
         .chat-message.user { align-self: flex-end; align-items: flex-end; } .chat-message.user .message-content { background-color: var(--highlight-color); color: var(--highlight-text-color); border-bottom-right-radius: 4px; }
         .chat-message.ai { align-self: flex-start; align-items: flex-start; } .chat-message.ai .message-content { background-color: var(--bg-subtle-color); border-bottom-left-radius: 4px; }
-        .chat-message.ai .message-content .loader { width: 18px; height: 18px; }
         .chat-input-area { display: flex; padding: 0.75rem; border-top: 1px solid var(--border-color); gap: 0.5rem; }
         #chat-input { flex-grow: 1; padding: 0.75rem 1rem; border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--bg-subtle-color); color: var(--text-color); font-size: 1em; resize: none; }
         #chat-input:focus { outline: none; border-color: var(--highlight-color); }
         #chat-send-btn { flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: none; background-color: var(--highlight-color); color: var(--highlight-text-color); display: flex; justify-content: center; align-items: center; cursor: pointer; transition: background-color 0.2s; }
         #chat-send-btn:disabled { background-color: var(--secondary-text-color); cursor: not-allowed; }
+        #api-key-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .api-key-dialog { background-color: var(--bg-color); padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 20px var(--shadow-color); }
+        .api-key-dialog h2 { margin-top: 0; font-weight: 500; }
+        .api-key-dialog p { font-size: 0.9em; color: var(--secondary-text-color); line-height: 1.6; }
+        .privacy-note { background-color: var(--bg-subtle-color); padding: 0.75rem; border-radius: 4px; border-left: 3px solid var(--highlight-color); margin: 1rem 0; }
+        #api-key-input { width: 100%; padding: 0.75rem; margin-top: 1rem; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 4px; font-size: 1em; }
+        #api-key-error { min-height: 1.2em; margin-top: 0.5rem; }
+        #save-api-key-btn { margin-top: 1rem; padding: 0.75rem 1.5rem; border: none; background-color: var(--highlight-color); color: var(--highlight-text-color); border-radius: 4px; font-size: 1em; cursor: pointer; }
+        #mw-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color); font-size: 0.8em; color: var(--secondary-text-color); }
     </style>
 </head>
 <body>
     <header id="mw-head">
         <div id="left-navigation">
-            <a id="wikipedia-logo" href="#">
-                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-wikipedia" viewBox="0 0 16 16"><path d="M8.835 3.003c.828-.006 2.688 0 2.688 0l.033.03v.288q0 .12-.133.12c-.433.02-.522.063-.68.29-.087.126-.258.393-.435.694l-1.52 2.843-.043.089 1.858 3.801.113.031 2.926-6.946q.152-.42-.044-.595c-.132-.114-.224-.18-.563-.195l-.275-.014a.16.16 0 0 1-.096-.035.1.1 0 0 1-.046-.084v-.289l.042-.03h3.306l.034.03v.29q0 .117-.133.117-.65.03-.962.281a1.64 1.64 0 0 0-.488.704s-2.691 6.16-3.612 8.208c-.353.672-.7.61-1.004-.019A224 224 0 0 1 8.044 8.81c-.623 1.285-1.475 3.026-1.898 3.81-.411.715-.75.622-1.02.019-.45-1.065-1.131-2.519-1.817-3.982-.735-1.569-1.475-3.149-1.943-4.272-.167-.4-.293-.657-.412-.759q-.18-.15-.746-.18Q0 3.421 0 3.341v-.303l.034-.03c.615-.003 3.594 0 3.594 0l.034.03v.288q0 .119-.15.118l-.375.016q-.483.02-.483.288-.002.125.109.4c.72 1.753 3.207 6.998 3.207 6.998l.091.023 1.603-3.197-.32-.71L6.24 5.095s-.213-.433-.286-.577l-.098-.196c-.387-.77-.411-.82-.865-.88-.137-.017-.208-.035-.208-.102v-.304l.041-.03h2.853l.075.024v.303q0 .104-.15.104l-.206.03c-.523.04-.438.254-.09.946l1.057 2.163 1.17-2.332c.195-.427.155-.534.074-.633-.046-.055-.202-.144-.54-.158l-.133-.015a.16.16 0 0 1-.096-.034.1.1 0 0 1-.045-.085v-.288l.041-.03Z"/></svg>
-                <span class="logo-text">Wikipedia</span>
-            </a>
+            <button id="menu-toggle" class="header-btn" aria-label="メインメニュー"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/></svg></button>
+            <a id="wikipedia-logo" href="#"><svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-wikipedia" viewBox="0 0 16 16"><path d="M8.835 3.003c.828-.006 2.688 0 2.688 0l.033.03v.288q0 .12-.133.12c-.433.02-.522.063-.68.29-.087.126-.258.393-.435.694l-1.52 2.843-.043.089 1.858 3.801.113.031 2.926-6.946q.152-.42-.044-.595c-.132-.114-.224-.18-.563-.195l-.275-.014a.16.16 0 0 1-.096-.035.1.1 0 0 1-.046-.084v-.289l.042-.03h3.306l.034.03v.29q0 .117-.133.117-.65.03-.962.281a1.64 1.64 0 0 0-.488.704s-2.691 6.16-3.612 8.208c-.353.672-.7.61-1.004-.019A224 224 0 0 1 8.044 8.81c-.623 1.285-1.475 3.026-1.898 3.81-.411.715-.75.622-1.02.019-.45-1.065-1.131-2.519-1.817-3.982-.735-1.569-1.475-3.149-1.943-4.272-.167-.4-.293-.657-.412-.759q-.18-.15-.746-.18Q0 3.421 0 3.341v-.303l.034-.03c.615-.003 3.594 0 3.594 0l.034.03v.288q0 .119-.15.118l-.375.016q-.483.02-.483.288-.002.125.109.4c.72 1.753 3.207 6.998 3.207 6.998l.091.023 1.603-3.197-.32-.71L6.24 5.095s-.213-.433-.286-.577l-.098-.196c-.387-.77-.411-.82-.865-.88-.137-.017-.208-.035-.208-.102v-.304l.041-.03h2.853l.075.024v.303q0 .104-.15.104l-.206.03c-.523.04-.438.254-.09.946l1.057 2.163 1.17-2.332c.195-.427.155-.534.074-.633-.046-.055-.202-.144-.54-.158l-.133-.015a.16.16 0 0 1-.096-.034.1.1 0 0 1-.045-.085v-.288l.041-.03Z"/></svg><span class="logo-text">Wikipedia</span></a>
         </div>
         <div id="right-navigation">
+            <button id="api-settings-btn" class="header-btn" title="APIキー設定">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/>
+                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l-.319-.094c-1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764-.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/>
+                </svg>
+            </button>
             <div id="p-search" role="search">
-                <input id="searchInput" placeholder="Wikipedia内を検索" title="Wikipedia内を検索" accesskey="f">
+                <input id="searchInput" placeholder="Wikipedia内を検索..." title="Wikipedia内を検索 [f]" accesskey="f">
+                <div id="search-suggestions"></div>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
             </div>
         </div>
     </header>
-    <nav id="mw-panel" role="navigation"></nav>
+    <nav id="mw-panel" role="navigation">
+        <div class="portal" role="navigation" id="p-navigation"><h3>ナビゲーション</h3><ul id="article-navigation-list"></ul></div>
+    </nav>
     <div id="content" role="main">
         <div class="mw-body">
-            <h1 id="firstHeading" class="firstHeading">人工知能</h1>
-            <div id="bodyContent" class="mw-body-content">
-                <div id="ai-summary-section" class="ai-section">
-                    <div class="ai-section-header">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-stars ai-icon" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg>
-                        <span>AIによる概要 (Gemini 2.5 Flash)</span>
-                    </div>
-                    <div id="ai-summary-content" class="ai-content"></div>
-                </div>
-                <p><b>人工知能</b>（じんこうちのう、<a href="#">英</a>: <a href="#">artificial intelligence</a>、<b>AI</b>）は、「『計算（computation）』という概念と『コンピュータ（computer）』という道具を用いて『知能』を研究する計算機科学（computer science）の一分野」を指す語。「言語の理解や推論、問題解決などの知的行動を人間に代わってコンピューターに行わせる技術」、または「計算機（コンピュータ）による知的な情報処理システムの設計や実現に関する研究分野」などと説明されることもある。</p>
-                <p>『<a href="#">日本大百科全書(ニッポニカ)』の解説</a>で、情報工学者・通信工学者の<a href="#">佐藤理史</a>は、AIの定義は研究者ごとに異なり未だ定まっていないと述べている。人工知能の定義は多数あるが、人工的に作られた、知能を持つ、実体（もの）である。</p>
-            </div>
+            <h1 id="firstHeading"></h1>
+            <div id="bodyContent" class="mw-body-content"></div>
+            <footer id="mw-footer">
+                <p>この記事のテキストは<a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ja" target="_blank" rel="noopener noreferrer">クリエイティブ・コモンズ 表示-継承 4.0 国際</a>ライセンスの下で利用可能です。</p>
+            </footer>
         </div>
     </div>
     <button id="ai-mode-toggle" title="AI Mode を開く"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars" viewBox="0 0 16 16"> <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg></button>
     <div id="ai-mode-chat-window">
         <div class="chat-header">
-            <div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars ai-icon" viewBox="0 0 16 16"> <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg><span>AI Mode</span></div>
-            <button class="chat-close-btn" id="chat-close-btn" title="閉じる">×</button>
+            <div class="chat-header-left">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stars ai-icon" viewBox="0 0 16 16"> <path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg>
+                <span>AI Mode</span>
+            </div>
+            <div class="chat-header-right">
+                 <button id="clear-chat-btn" class="chat-header-btn" title="チャット履歴を削除"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg></button>
+                 <button id="fullscreen-btn" class="chat-header-btn" title="フルスクリーン"></button>
+                 <button id="chat-close-btn" class="chat-header-btn" title="閉じる"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/></svg></button>
+            </div>
         </div>
         <div id="chat-messages"></div>
         <div class="chat-input-area">
@@ -105,149 +135,295 @@
             <button id="chat-send-btn" title="送信"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/></svg></button>
         </div>
     </div>
-    <script>
+    <div id="api-key-modal">
+        <div class="api-key-dialog">
+            <h2>Gemini APIキーを設定</h2>
+            <p>AI機能を利用するには、Google AI Studioで取得したAPIキーが必要です。入力されたキーは、お使いのブラウザにのみ保存されます。</p>
+            <p class="privacy-note"><b>注意:</b> AI機能の利用時、表示中の記事の内容や入力した質問が、API提供元（Google）のサーバーに送信されます。</p>
+            <input type="password" id="api-key-input" placeholder="ここにAPIキーを貼り付け...">
+            <div id="api-key-error" class="error-message"></div>
+            <button id="save-api-key-btn">保存して閉じる</button>
+        </div>
+    </div>
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+        const navLinks = { 
+            'メインページ': 'メインページ', 
+            'コミュニティ・ポータル': 'Wikipedia:コミュニティ・ポータル', 
+            '最近の出来事': 'Portal:最近の出来事', 
+            '最近の更新': 'https://ja.wikipedia.org/wiki/特別:最近の更新?hidebots=1&hidecategorization=1&hideWikibase=1&limit=50&days=7&urlversion=2',
+            'おまかせ表示': 'https://ja.wikipedia.org/wiki/特別:おまかせ表示',
+            '特別ページ一覧': 'https://ja.wikipedia.org/wiki/特別:特別ページ一覧' 
+        };
+        const apiKeyModal = document.getElementById('api-key-modal'), apiKeyInput = document.getElementById('api-key-input'), saveApiKeyBtn = document.getElementById('save-api-key-btn'), apiKeyError = document.getElementById('api-key-error'), aiModeToggle = document.getElementById('ai-mode-toggle'), chatWindow = document.getElementById('ai-mode-chat-window'), closeChatBtn = document.getElementById('chat-close-btn'), chatMessages = document.getElementById('chat-messages'), chatInput = document.getElementById('chat-input'), chatSendBtn = document.getElementById('chat-send-btn'), fullscreenBtn = document.getElementById('fullscreen-btn'), clearChatBtn = document.getElementById('clear-chat-btn'), htmlEl = document.documentElement, mainContent = document.getElementById('content'), bodyContent = document.getElementById('bodyContent'), firstHeading = document.getElementById('firstHeading'), articleNavList = document.getElementById('article-navigation-list'), menuToggle = document.getElementById('menu-toggle'), mwPanel = document.getElementById('mw-panel'), searchInput = document.getElementById('searchInput'), searchSuggestions = document.getElementById('search-suggestions'), apiSettingsBtn = document.getElementById('api-settings-btn'), wikipediaLogo = document.getElementById('wikipedia-logo');
+        let genAI, chat, pageContext = '', currentArticleTitle = '人工知能';
+        const MODEL_NAME = "gemini-2.5-flash";
+        const icons = { fullscreen: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen" viewBox="0 0 16 16"><path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5"/></svg>`, exitFullscreen: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen-exit" viewBox="0 0 16 16"><path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/></svg>`};
+        
         document.addEventListener('DOMContentLoaded', () => {
-            const summaryContent = document.getElementById('ai-summary-content');
-            const aiModeToggle = document.getElementById('ai-mode-toggle');
-            const chatWindow = document.getElementById('ai-mode-chat-window');
-            const closeChatBtn = document.getElementById('chat-close-btn');
-            const chatMessages = document.getElementById('chat-messages');
-            const chatInput = document.getElementById('chat-input');
-            const chatSendBtn = document.getElementById('chat-send-btn');
-            const htmlEl = document.documentElement;
-            const bodyContent = document.getElementById('bodyContent');
+            const apiKey = localStorage.getItem('GEMINI_API_KEY');
+            initializeApp(apiKey);
+            setupEventListeners();
+            buildNavigation();
+            loadArticle(currentArticleTitle);
+        });
 
-            let chatHistory = [];
-            let pageContext = '';
-
-            // --- Initialization ---
-            function initializeApp() {
-                pageContext = getPageContext();
-                generateAiSummary();
-                initializeChat();
-            }
-
-            function getPageContext() {
-                const title = document.getElementById('firstHeading').textContent;
-                const paragraphs = Array.from(bodyContent.querySelectorAll('p')).map(p => p.textContent).join('\n').substring(0, 3000);
-                return `この記事のタイトルは「${title}」です。\n記事の本文の冒頭は以下の通りです:\n${paragraphs}`;
-            }
-
-            function toggleTheme(isDark) {
-                htmlEl.classList.toggle('dark-theme', isDark);
-            }
-
+        function setupEventListeners() {
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
             toggleTheme(prefersDark.matches);
-            prefersDark.addEventListener('change', (e) => toggleTheme(e.matches));
-            
-            // --- API Communication ---
-            async function streamApiRequest(endpoint, payload, targetElement) {
-                const loaderHtml = `<div class="loader-container"><div class="loader"></div></div>`;
-                if(targetElement) targetElement.innerHTML = loaderHtml;
-                
-                try {
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'サーバーでエラーが発生しました。');
-                    }
-
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let fullText = '';
-                    
-                    if(targetElement) targetElement.innerHTML = '';
-
-                    while (true) {
-                        const { value, done } = await reader.read();
-                        if (done) break;
-                        const chunk = decoder.decode(value, { stream: true });
-                        fullText += chunk;
-                        if(targetElement) {
-                           targetElement.textContent = fullText;
-                           chatMessages.scrollTop = chatMessages.scrollHeight;
-                        }
-                    }
-                    return fullText;
-                } catch (error) {
-                    console.error("API Error:", error);
-                    if(targetElement) targetElement.innerHTML = `<p class="error-message">AIの応答生成中にエラーが発生しました: ${error.message}</p>`;
-                    return null;
-                }
-            }
-
-            // --- AI Summary ---
-            function generateAiSummary() {
-                const contentParagraph = document.createElement('p');
-                summaryContent.appendChild(contentParagraph);
-                streamApiRequest('/api/summary', { context: pageContext }, contentParagraph);
-            }
-
-            // --- AI Mode Chat ---
-            function initializeChat() {
-                const initialBotMessage = { role: 'model', text: '承知いたしました。「人工知能」の記事について、何でもご質問ください。' };
-                chatHistory = [{ role: 'user', text: `あなたはWikipediaの専門家アシスタントです。これから「人工知能」のページに関する質問に答えてください。参考として、記事の冒頭部分を伝えます。\n\n${pageContext}` }, initialBotMessage];
-                addMessageToChat('ai', initialBotMessage.text);
-            }
-
-            function addMessageToChat(sender, text) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `chat-message ${sender}`;
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'message-content';
-                contentDiv.textContent = text;
-                messageDiv.appendChild(contentDiv);
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                return contentDiv;
-            }
-
-            async function handleSendMessage() {
-                const messageText = chatInput.value.trim();
-                if (!messageText) return;
-
-                addMessageToChat('user', messageText);
-                chatHistory.push({ role: 'user', text: messageText });
-                
-                chatInput.value = '';
-                chatInput.style.height = 'auto';
-                chatSendBtn.disabled = true;
-
-                const aiResponseElement = addMessageToChat('ai', '');
-                aiResponseElement.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
-
-                const fullResponse = await streamApiRequest('/api/chat', { history: chatHistory }, aiResponseElement);
-                
-                if(fullResponse) {
-                    chatHistory.push({ role: 'model', text: fullResponse });
-                }
-                
-                chatSendBtn.disabled = false;
-                chatInput.focus();
-            }
-            
+            prefersDark.addEventListener('change', e => toggleTheme(e.matches));
+            apiSettingsBtn.addEventListener('click', showApiKeyModal);
+            saveApiKeyBtn.addEventListener('click', handleSaveApiKey);
             aiModeToggle.addEventListener('click', () => chatWindow.classList.toggle('visible'));
-            closeChatBtn.addEventListener('click', () => chatWindow.classList.remove('visible'));
+            closeChatBtn.addEventListener('click', () => { chatWindow.classList.remove('visible'); if (chatWindow.classList.contains('fullscreen')) toggleChatFullscreen(); });
+            fullscreenBtn.addEventListener('click', toggleChatFullscreen);
+            clearChatBtn.addEventListener('click', handleClearChat);
             chatSendBtn.addEventListener('click', handleSendMessage);
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
+            searchInput.addEventListener('input', debounce(handleSearchInput, 300));
+            searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { loadArticle(e.target.value); searchSuggestions.style.display = 'none'; e.target.blur(); } });
+            document.addEventListener('click', e => { if (!e.target.closest('#p-search')) searchSuggestions.style.display = 'none'; });
+            menuToggle.addEventListener('click', toggleSidebar);
+            wikipediaLogo.addEventListener('click', (e) => { e.preventDefault(); loadArticle('メインページ'); });
+        }
+
+        function initializeApp(apiKey) {
+            if (!apiKey) { genAI = null; return; }
+            try { 
+                genAI = new GoogleGenerativeAI(apiKey);
+                genAI.getGenerativeModel({ model: MODEL_NAME }).countTokens("test");
+            } 
+            catch (error) { 
+                console.error("API Initialization Error:", error);
+                localStorage.removeItem('GEMINI_API_KEY');
+                genAI = null;
+                showApiKeyModal();
+                apiKeyError.textContent = "APIキーの初期化に失敗しました。キーが正しいか確認してください。";
+            }
+        }
+
+        function showApiKeyModal() {
+            apiKeyError.textContent = '';
+            apiKeyInput.value = localStorage.getItem('GEMINI_API_KEY') || '';
+            apiKeyModal.style.display = 'flex';
+        }
+        
+        function handleSaveApiKey() {
+            const key = apiKeyInput.value.trim();
+            apiKeyError.textContent = '';
+            if (key) {
+                localStorage.setItem('GEMINI_API_KEY', key);
+                initializeApp(key);
+                if(genAI) {
+                    apiKeyModal.style.display = 'none';
+                    initializeAiFeatures();
                 }
-            });
-            chatInput.addEventListener('input', () => {
-                chatInput.style.height = 'auto';
-                chatInput.style.height = `${chatInput.scrollHeight}px`;
-            });
+            } else {
+                localStorage.removeItem('GEMINI_API_KEY');
+                genAI = null;
+                apiKeyError.textContent = 'APIキーが削除されました。';
+                initializeAiFeatures();
+            }
+        }
+
+        function toggleSidebar() { mwPanel.classList.toggle('hidden'); mainContent.classList.toggle('full-width'); }
+        function buildNavigation() {
+            articleNavList.innerHTML = '';
+            for (const title in navLinks) {
+                const li = document.createElement('li'), a = document.createElement('a');
+                a.textContent = title;
+                const linkTarget = navLinks[title];
+                if (linkTarget.startsWith('http')) {
+                    a.href = linkTarget; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                } else {
+                    a.dataset.articleTitle = linkTarget; a.href = '#';
+                    a.onclick = e => { e.preventDefault(); loadArticle(linkTarget); };
+                }
+                li.appendChild(a);
+                articleNavList.appendChild(li);
+            }
+        }
+        
+        async function handleSearchInput() {
+            const query = searchInput.value.trim();
+            if (!query) { searchSuggestions.style.display = 'none'; return; }
+            const endpoint = `https://ja.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=10&namespace=0&format=json&origin=*`;
+            try {
+                const response = await fetch(endpoint);
+                const data = await response.json();
+                const titles = data[1];
+                searchSuggestions.innerHTML = '';
+                if (titles && titles.length > 0) {
+                    titles.forEach(title => {
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item';
+                        item.textContent = title;
+                        item.onclick = () => { loadArticle(title); searchInput.value = ''; searchSuggestions.style.display = 'none'; };
+                        searchSuggestions.appendChild(item);
+                    });
+                    searchSuggestions.style.display = 'block';
+                } else { searchSuggestions.style.display = 'none'; }
+            } catch (error) { console.error("Search API error:", error); searchSuggestions.style.display = 'none'; }
+        }
+
+        async function loadArticle(title) {
+            currentArticleTitle = title;
+            firstHeading.textContent = '読み込み中…';
+            bodyContent.innerHTML = `<div class="loader-container"><div class="loader"></div><span>Wikipediaから記事を取得中...</span></div>`;
+            document.querySelectorAll('#article-navigation-list a').forEach(a => a.classList.toggle('active', a.dataset.articleTitle === title));
+            try {
+                const articleData = await fetchWikipediaContent(title);
+                const doc = new DOMParser().parseFromString(articleData.title, 'text/html');
+                const cleanTitle = doc.body.textContent || '';
+                firstHeading.textContent = cleanTitle;
+                currentArticleTitle = cleanTitle;
+                bodyContent.innerHTML = articleData.html;
+                cleanArticleContent();
+                document.title = `${cleanTitle} - Wikipedia (AI Demo)`;
+                initializeAiFeatures();
+            } catch (error) {
+                console.error("Article fetch error:", error);
+                firstHeading.textContent = "取得エラー";
+                bodyContent.innerHTML = `<p class="error-message">記事「${title}」の取得に失敗しました。ページが存在しないか、ネットワークに問題がある可能性があります。</p>`;
+            }
+        }
+
+        async function fetchWikipediaContent(pageTitle) {
+            const endpoint = `https://ja.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=text|displaytitle&formatversion=2&format=json&origin=*`;
+            const response = await fetch(endpoint);
+            if (!response.ok) throw new Error('Network response was not ok.');
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.info);
+            return { title: data.parse.displaytitle, html: data.parse.text };
+        }
+
+        function cleanArticleContent() {
+            // ★修正点：表などのコンテナは残し、画像や画像専用コンテナのみを削除
+            bodyContent.querySelectorAll('img, .thumb, .image, .gallery').forEach(el => el.remove());
             
-            initializeApp();
-        });
+            // 記事本文に関係のない、その他のUI要素を削除
+            bodyContent.querySelectorAll('.mw-editsection, .navbox, .mw-collapsible-toggle, .mw-jump-link, .reference, .reflist, .hatnote, #toc').forEach(el => el.remove());
+            
+            // リンクの挙動を変更
+            bodyContent.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href && (href.startsWith('./') || href.startsWith('/wiki/'))) {
+                    const newTitle = decodeURIComponent(href.replace(/^(.\/|\/wiki\/)/, '')).replace(/_/g, ' ');
+                    a.onclick = e => { e.preventDefault(); loadArticle(newTitle); };
+                } else { if (href && !href.startsWith('#')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; } }
+            });
+        }
+        
+        function initializeAiFeatures() {
+            pageContext = getPageContext();
+            generateAiSummary();
+            initializeChat();
+        }
+
+        function getPageContext() {
+            const title = firstHeading.textContent;
+            const text = new DOMParser().parseFromString(bodyContent.innerHTML, 'text/html').body.textContent || "";
+            return `この記事のタイトルは「${title}」です。\n記事の本文:\n${text.trim().substring(0, 15000)}`;
+        }
+
+        function generateAiSummary() {
+            const existingSummary = document.getElementById('ai-summary-section');
+            if(existingSummary) existingSummary.remove();
+            
+            const summaryContainer = document.createElement('div');
+            summaryContainer.id = 'ai-summary-section';
+            summaryContainer.className = 'ai-section';
+            const headerHTML = `<div class="ai-section-header"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-stars ai-icon" viewBox="0 0 16 16"><path d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg><span>AIによる概要</span></div>`;
+            const promptHTML = `<div class="ai-content"><p class="error-message" style="cursor:pointer;" id="prompt-set-key">AI機能を利用するには、右上の<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display:inline-block;vertical-align:-.125em;"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l-.319-.094c-1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764-.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>設定ボタンからAPIキーを設定してください。</p></div>`;
+            
+            if (genAI) {
+                summaryContainer.innerHTML = headerHTML + `<div id="ai-summary-content" class="ai-content"></div>`;
+                bodyContent.prepend(summaryContainer);
+                const summaryContentEl = document.getElementById('ai-summary-content');
+                const prompt = `あなたはWikipediaの専門家です。以下の記事「${currentArticleTitle}」の内容を読み、最も重要な点を3〜4文で簡潔かつ正確に要約してください。\n\n---\n${pageContext}\n---`;
+                runStreamingAPI(prompt, summaryContentEl, false);
+            } else {
+                summaryContainer.innerHTML = headerHTML + promptHTML;
+                bodyContent.prepend(summaryContainer);
+                document.getElementById('prompt-set-key').addEventListener('click', showApiKeyModal);
+            }
+        }
+        
+        function initializeChat() {
+            chatMessages.innerHTML = '';
+            if (!genAI) {
+                addMessageToChat('ai', 'AIチャットを利用するには、右上の設定ボタンからAPIキーを設定してください。');
+                chat = null;
+                return;
+            }
+            const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+            const initialHistory = [{ role: "user", parts: [{ text: `あなたはWikipediaの専門家アシスタントです。これから「${currentArticleTitle}」のページに関する質問に答えてください。参考情報として記事本文を渡します。\n\n---\n${pageContext}\n---` }] }, { role: "model", parts: [{ text: `承知いたしました。「${currentArticleTitle}」の記事について、何でもご質問ください。なお、AIとの対話内容はAPI提供元に送信される可能性がありますのでご留意ください。` }] }];
+            chat = model.startChat({ history: initialHistory });
+            addMessageToChat('ai', initialHistory[1].parts[0].text);
+        }
+
+        function handleClearChat() {
+            if (confirm('チャット履歴を本当に削除しますか？')) {
+                initializeChat();
+            }
+        }
+
+        function toggleChatFullscreen() {
+            chatWindow.classList.toggle('fullscreen');
+            const isFullscreen = chatWindow.classList.contains('fullscreen');
+            fullscreenBtn.innerHTML = isFullscreen ? icons.exitFullscreen : icons.fullscreen;
+            fullscreenBtn.title = isFullscreen ? '元のサイズに戻す' : 'フルスクリーン';
+        }
+        fullscreenBtn.innerHTML = icons.fullscreen;
+
+        async function runStreamingAPI(prompt, targetElement, isChat = false) {
+            if (!genAI) { if(targetElement) targetElement.innerHTML = `<p class="error-message">APIキーが設定されていません。右上の設定からキーを入力してください。</p>`; return null; }
+            if (targetElement) { targetElement.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`; }
+            try {
+                const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+                const result = isChat ? await chat.sendMessageStream(prompt) : await model.generateContentStream(prompt);
+                let text = '';
+                for await (const chunk of result.stream) {
+                    if (targetElement.querySelector('.loader-container')) targetElement.innerHTML = '';
+                    text += chunk.text();
+                    if (targetElement) { targetElement.textContent = text; if (isChat) chatMessages.scrollTop = chatMessages.scrollHeight; }
+                }
+                return text;
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                if (targetElement) targetElement.innerHTML = `<p class="error-message">AI応答中にエラーが発生しました。APIキーやモデル設定、またはネットワーク接続を確認してください。</p>`;
+                return null;
+            }
+        }
+
+        function addMessageToChat(sender, textContent) {
+            const messageDiv = document.createElement('div'), contentDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}`;
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = textContent;
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return contentDiv;
+        }
+
+        async function handleSendMessage() {
+            const messageText = chatInput.value.trim();
+            if (!messageText) return;
+            if (!chat) {
+                addMessageToChat('ai', 'AI機能を利用するにはAPIキーが必要です。右上の歯車アイコンから設定してください。');
+                return;
+            }
+            addMessageToChat('user', messageText);
+            chatInput.value = ''; chatInput.style.height = 'auto'; chatSendBtn.disabled = true;
+            const aiResponseElement = addMessageToChat('ai', '');
+            aiResponseElement.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
+            await runStreamingAPI(messageText, aiResponseElement, true);
+            chatSendBtn.disabled = false;
+            chatInput.focus();
+        }
+        
+        function toggleTheme(isDark) { htmlEl.classList.toggle('dark-theme', isDark); }
+        function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
     </script>
 </body>
 </html>
