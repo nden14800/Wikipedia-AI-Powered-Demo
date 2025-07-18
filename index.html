@@ -68,8 +68,41 @@
         #chat-input:focus { outline: none; }
         #chat-send-btn { background-color: var(--highlight-color); }
         #mw-footer { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); font-size: 0.9em; color: var(--secondary-text-color); text-align: center; }
-        .loader { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--loader-color); animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* ▼▼▼ ローディングスピナーのスタイルを変更 ▼▼▼ */
         .loader-container { display: flex; flex-direction: column; gap: 1rem; justify-content: center; align-items: center; min-height: 200px; }
+        .loader {
+            width: 24px;
+            height: 24px;
+            animation: rotate 2s linear infinite;
+            transform-origin: center center;
+        }
+        .loader .path {
+            stroke: var(--loader-color);
+            stroke-linecap: round;
+            animation: dash 1.5s ease-in-out infinite;
+        }
+        @keyframes rotate {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        @keyframes dash {
+            0% {
+                stroke-dasharray: 1, 150;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 90, 150;
+                stroke-dashoffset: -35;
+            }
+            100% {
+                stroke-dasharray: 90, 150;
+                stroke-dashoffset: -124;
+            }
+        }
+        /* ▲▲▲ ローディングスピナーのスタイルを変更 ▲▲▲ */
+
         .error-message { color: var(--error-color); font-size: 0.9em; }
         #ai-mode-chat-window.fullscreen { top: 0; left: 0; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; bottom: 0; right: 0; border-radius: 0; }
         .chat-header-left, .chat-header-right { display: flex; align-items: center; gap: 0.5rem; }
@@ -327,7 +360,9 @@
         async function loadArticle(title) {
             currentArticleTitle = title;
             firstHeading.textContent = '読み込み中…';
-            bodyContent.innerHTML = `<div class="loader-container"><div class="loader"></div><span>Wikipediaから記事を取得中...</span></div>`;
+            // ▼▼▼ ローディングHTMLを新しいSVGに変更 ▼▼▼
+            bodyContent.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2.5"></circle></svg><span>Wikipediaから記事を取得中...</span></div>`;
+            // ▲▲▲ ローディングHTMLを新しいSVGに変更 ▲▲▲
             try {
                 const articleData = await fetchWikipediaContent(title);
                 const doc = new DOMParser().parseFromString(articleData.title, 'text/html');
@@ -433,7 +468,9 @@
 
         async function runStreamingAPI(prompt, targetElement, isChat = false) {
             if (!genAI) { if(targetElement) targetElement.innerHTML = `<p class="error-message">APIキーが設定されていません。右上の設定からキーを入力してください。</p>`; return null; }
-            if (targetElement) { targetElement.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`; }
+            // ▼▼▼ ローディングHTMLを新しいSVGに変更 ▼▼▼
+            if (targetElement) { targetElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2.5"></circle></svg></div>`; }
+            // ▲▲▲ ローディングHTMLを新しいSVGに変更 ▲▲▲
             try {
                 const model = genAI.getGenerativeModel({ model: MODEL_NAME });
                 const result = isChat ? await chat.sendMessageStream(prompt) : await model.generateContentStream(prompt);
@@ -472,7 +509,9 @@
             addMessageToChat('user', messageText);
             chatInput.value = ''; chatInput.style.height = 'auto'; chatSendBtn.disabled = true;
             const aiResponseElement = addMessageToChat('ai', '');
-            aiResponseElement.innerHTML = `<div class="loader-container"><div class="loader"></div></div>`;
+            // ▼▼▼ ローディングHTMLを新しいSVGに変更 ▼▼▼
+            aiResponseElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2.5"></circle></svg></div>`;
+            // ▲▲▲ ローディングHTMLを新しいSVGに変更 ▲▲▲
             await runStreamingAPI(messageText, aiResponseElement, true);
             chatSendBtn.disabled = false;
             chatInput.focus();
