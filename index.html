@@ -69,14 +69,15 @@
         #chat-send-btn { background-color: var(--highlight-color); }
         #mw-footer { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); font-size: 0.9em; color: var(--secondary-text-color); text-align: center; }
         
-        /* ▼▼▼ ローディングスピナーのスタイルを変更 ▼▼▼ */
         .loader-container { display: flex; flex-direction: column; gap: 1rem; justify-content: center; align-items: center; min-height: 200px; }
+        /* ▼▼▼ ローディングスピナーのサイズを2倍に変更 ▼▼▼ */
         .loader {
-            width: 24px;
-            height: 24px;
+            width: 48px;
+            height: 48px;
             animation: rotate 2s linear infinite;
             transform-origin: center center;
         }
+        /* ▲▲▲ ローディングスピナーのサイズを2倍に変更 ▲▲▲ */
         .loader .path {
             stroke: var(--loader-color);
             stroke-linecap: round;
@@ -101,7 +102,6 @@
                 stroke-dashoffset: -124;
             }
         }
-        /* ▲▲▲ ローディングスピナーのスタイルを変更 ▲▲▲ */
 
         .error-message { color: var(--error-color); font-size: 0.9em; }
         #ai-mode-chat-window.fullscreen { top: 0; left: 0; width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; bottom: 0; right: 0; border-radius: 0; }
@@ -360,9 +360,7 @@
         async function loadArticle(title) {
             currentArticleTitle = title;
             firstHeading.textContent = '読み込み中…';
-            // ▼▼▼ ローディングHTMLを新しいSVGに変更 ▼▼▼
             bodyContent.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2.5"></circle></svg><span>Wikipediaから記事を取得中...</span></div>`;
-            // ▲▲▲ ローディングHTMLを新しいSVGに変更 ▲▲▲
             try {
                 const articleData = await fetchWikipediaContent(title);
                 const doc = new DOMParser().parseFromString(articleData.title, 'text/html');
@@ -421,7 +419,6 @@
             const summaryContainer = document.createElement('div');
             summaryContainer.id = 'ai-summary-section';
             summaryContainer.className = 'ai-section';
-            // AI概要セクションのSVGアイコンにグラデーションを適用
             const headerHTML = `<div class="ai-section-header"><svg width="20" height="20" viewBox="0 0 16 16"><defs><linearGradient id="ai-icon-gradient-summary" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#4285F4" /><stop offset="33%" style="stop-color:#9b72cb" /><stop offset="66%" style="stop-color:#d96570" /><stop offset="100%" style="stop-color:#f2a60c" /></linearGradient></defs><path fill="url(#ai-icon-gradient-summary)" d="M7.657 6.247c.11-.33.576-.33.686 0l.645 1.937a2.89 2.89 0 0 0 1.829 1.828l1.936.645c.33.11.33.576 0 .686l-1.937.645a2.89 2.89 0 0 0-1.828 1.829l-.645 1.936a.361.361 0 0 1-.686 0l-.645-1.937a2.89 2.89 0 0 0-1.828-1.828l-1.937-.645a.361.361 0 0 1 0-.686l1.937-.645a2.89 2.89 0 0 0 1.828-1.828zM3.794 1.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387A1.73 1.73 0 0 0 4.593 5.69l-.387 1.162a.217.217 0 0 1-.412 0L3.407 5.69A1.73 1.73 0 0 0 2.31 4.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387A1.73 1.73 0 0 0 3.407 2.31zM10.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732L9.1 2.137a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></svg><span>AIによる概要</span></div>`;
             const disclaimerHTML = `<p class="ai-disclaimer">AIの回答には間違いが含まれている場合があります。</p>`;
             const promptHTML = `<div class="ai-content"><p class="error-message" style="cursor:pointer;" id="prompt-set-key">AI機能を利用するには、右上の<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="display:inline-block;vertical-align:-.125em;"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l-.319-.094c-1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764-.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></svg>設定ボタンからAPIキーを設定してください。</p></div>`;
@@ -468,9 +465,7 @@
 
         async function runStreamingAPI(prompt, targetElement, isChat = false) {
             if (!genAI) { if(targetElement) targetElement.innerHTML = `<p class="error-message">APIキーが設定されていません。右上の設定からキーを入力してください。</p>`; return null; }
-            // ▼▼▼ ローディングHTMLを新しいSVGに変更 ▼▼▼
             if (targetElement) { targetElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2.5"></circle></svg></div>`; }
-            // ▲▲▲ ローディングHTMLを新しいSVGに変更 ▲▲▲
             try {
                 const model = genAI.getGenerativeModel({ model: MODEL_NAME });
                 const result = isChat ? await chat.sendMessageStream(prompt) : await model.generateContentStream(prompt);
@@ -509,9 +504,7 @@
             addMessageToChat('user', messageText);
             chatInput.value = ''; chatInput.style.height = 'auto'; chatSendBtn.disabled = true;
             const aiResponseElement = addMessageToChat('ai', '');
-            // ▼▼▼ ローディングHTMLを新しいSVGに変更 ▼▼▼
             aiResponseElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2.5"></circle></svg></div>`;
-            // ▲▲▲ ローディングHTMLを新しいSVGに変更 ▲▲▲
             await runStreamingAPI(messageText, aiResponseElement, true);
             chatSendBtn.disabled = false;
             chatInput.focus();
