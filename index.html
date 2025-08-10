@@ -118,6 +118,53 @@
         #bookmarks-list a { font-weight: 500; }
         #bookmarks-list .remove-bookmark-btn { background: none; border: none; color: var(--secondary-text-color); cursor: pointer; padding: 0.5rem; border-radius: 50%; }
         #bookmarks-list .remove-bookmark-btn:hover { background-color: var(--bg-subtle-color); color: var(--error-color); }
+
+        /* ▼▼▼ 変更・追加 ▼▼▼ */
+        /* 目次のスタイル */
+        #toc {
+            background-color: var(--bg-subtle-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            width: fit-content;
+            min-width: 250px;
+            max-width: 90%;
+            float: left; /* テキストを回り込ませる */
+            margin-right: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .toc-title {
+            font-weight: bold;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            font-size: 1.1em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        #toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        #toc > ul > li {
+            margin-bottom: 0.5em;
+            font-weight: 500;
+        }
+        #toc ul ul { /* ネストしたリスト (H3) */
+            padding-left: 1.5rem;
+            margin-top: 0.5em;
+            font-weight: 400;
+        }
+        #toc a {
+            text-decoration: none;
+            display: block;
+        }
+        #toc a:hover {
+            text-decoration: underline;
+        }
+        /* ▲▲▲ 変更・追加 ▲▲▲ */
     </style>
 </head>
 <body>
@@ -357,6 +404,7 @@
                 currentArticleTitle = cleanTitle;
                 bodyContent.innerHTML = articleData.html;
                 cleanArticleContent();
+                generateTableOfContents(); // <!-- ▼▼▼ 変更・追加 ▼▼▼ --> 目次を生成
                 document.title = `${cleanTitle} - Wikipedia Demo`;
                 updateBookmarkButton();
                 initializeAiFeatures();
@@ -377,8 +425,8 @@
         }
 
         function cleanArticleContent() {
-            bodyContent.querySelectorAll('img, .thumb, .image, .gallery').forEach(el => el.remove());
-            bodyContent.querySelectorAll('.mw-editsection, .navbox, .mw-collapsible-toggle, .mw-jump-link, .reference, .reflist, .hatnote, #toc').forEach(el => el.remove());
+             // <!-- ▼▼▼ 変更・追加 ▼▼▼ --> 古い目次(#toc)も削除対象に追加
+            bodyContent.querySelectorAll('img, .thumb, .image, .gallery, .mw-editsection, .navbox, .mw-collapsible-toggle, .mw-jump-link, .reference, .reflist, .hatnote, #toc').forEach(el => el.remove());
             bodyContent.querySelectorAll('a').forEach(a => {
                 const href = a.getAttribute('href');
                 if (href && (href.startsWith('./') || href.startsWith('/wiki/'))) {
@@ -386,6 +434,72 @@
                     a.onclick = e => { e.preventDefault(); loadArticle(newTitle); };
                 } else { if (href && !href.startsWith('#')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; } }
             });
+        }
+        
+        // <!-- ▼▼▼ 変更・追加 ▼▼▼ --> 目次生成機能
+        function generateTableOfContents() {
+            const headings = bodyContent.querySelectorAll('h2, h3');
+            if (headings.length < 3) return; // 見出しが少ない場合は目次を生成しない
+
+            const tocContainer = document.createElement('div');
+            tocContainer.id = 'toc';
+            tocContainer.innerHTML = '<p class="toc-title">目次</p>';
+            const mainList = document.createElement('ul');
+            tocContainer.appendChild(mainList);
+
+            let h2Counter = 0;
+            let lastH2ListItem = null;
+
+            headings.forEach((heading, index) => {
+                // `mw-headline` クラスを持つ span からテキストを取得。なければ見出し全体から取得。
+                const headlineSpan = heading.querySelector('.mw-headline');
+                const headingText = headlineSpan ? headlineSpan.textContent.trim() : heading.textContent.trim();
+                if (!headingText) return;
+
+                const id = `toc-section-${index}`;
+                heading.id = id;
+
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${id}`;
+
+                // スムーズスクロールを実装
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetElement = document.getElementById(id);
+                    if (targetElement) {
+                      targetElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+                
+                if (heading.tagName === 'H2') {
+                    h2Counter++;
+                    link.textContent = `${h2Counter}. ${headingText}`;
+                    listItem.appendChild(link);
+                    mainList.appendChild(listItem);
+                    lastH2ListItem = listItem; // 最後のH2のliを記憶
+                } else if (heading.tagName === 'H3' && lastH2ListItem) {
+                    // 最後に処理したH2のli要素にサブリスト(ul)がなければ作成
+                    let sublist = lastH2ListItem.querySelector('ul');
+                    if (!sublist) {
+                        sublist = document.createElement('ul');
+                        lastH2ListItem.appendChild(sublist);
+                    }
+                    link.textContent = headingText; // H3は番号なしでシンプルに
+                    listItem.appendChild(link);
+                    sublist.appendChild(listItem);
+                }
+            });
+
+            // 目次に項目が追加された場合のみ、ページに挿入する
+            if (mainList.children.length > 0) {
+                 const firstMeaningfulElement = bodyContent.querySelector('p, div.ai-section');
+                 if (firstMeaningfulElement) {
+                    firstMeaningfulElement.parentNode.insertBefore(tocContainer, firstMeaningfulElement);
+                 } else {
+                    bodyContent.prepend(tocContainer);
+                 }
+            }
         }
         
         function initializeAiFeatures() {
@@ -413,13 +527,13 @@
             
             if (genAI) {
                 summaryContainer.innerHTML = headerHTML + disclaimerHTML + `<div id="ai-summary-content" class="ai-content"></div>`;
-                bodyContent.prepend(summaryContainer);
+                bodyContent.append(summaryContainer);
                 const summaryContentEl = document.getElementById('ai-summary-content');
                 const prompt = `あなたはWikipediaの専門家です。以下の記事「${currentArticleTitle}」の内容を読み、最も重要な点を3〜4文で簡潔かつ正確に要約してください。\n\n---\n${pageContext}\n---`;
                 runStreamingAPI(prompt, summaryContentEl, false);
             } else {
                 summaryContainer.innerHTML = headerHTML + disclaimerHTML + promptHTML;
-                bodyContent.prepend(summaryContainer);
+                bodyContent.append(summaryContainer);
                 document.getElementById('prompt-set-key').addEventListener('click', showApiKeyModal);
             }
         }
