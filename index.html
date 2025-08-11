@@ -80,9 +80,9 @@
         .loader .path {
             stroke: var(--loader-color);
             stroke-linecap: round;
-            stroke-dasharray: 89, 150;
+            stroke-dasharray: 89 150;
             stroke-dashoffset: 0;
-            stroke-width: 2px;
+            stroke-width: 2.5px;
         }
         @keyframes rotate {
             100% {
@@ -348,7 +348,7 @@
         async function loadArticle(title) {
             currentArticleTitle = title;
             firstHeading.textContent = '読み込み中…';
-            bodyContent.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2"></circle></svg><span>Wikipediaから記事を取得中...</span></div>`;
+            bodyContent.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none"></circle></svg><span>Wikipediaから記事を取得中...</span></div>`;
             try {
                 const articleData = await fetchWikipediaContent(title);
                 const doc = new DOMParser().parseFromString(articleData.title, 'text/html');
@@ -453,7 +453,7 @@
 
         async function runStreamingAPI(prompt, targetElement, isChat = false) {
             if (!genAI) { if(targetElement) targetElement.innerHTML = `<p class="error-message">APIキーが設定されていません。右上の設定からキーを入力してください。</p>`; return null; }
-            if (targetElement) { targetElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2"></circle></svg></div>`; }
+            if (targetElement) { targetElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none"></circle></svg></div>`; }
             try {
                 const model = genAI.getGenerativeModel({ model: MODEL_NAME });
                 const result = isChat ? await chat.sendMessageStream(prompt) : await model.generateContentStream(prompt);
@@ -492,7 +492,7 @@
             addMessageToChat('user', messageText);
             chatInput.value = ''; chatInput.style.height = 'auto'; chatSendBtn.disabled = true;
             const aiResponseElement = addMessageToChat('ai', '');
-            aiResponseElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="2"></circle></svg></div>`;
+            aiResponseElement.innerHTML = `<div class="loader-container"><svg class="loader" viewBox="0 0 50 50"><circle class="path" cx="25" cy="25" r="20" fill="none"></circle></svg></div>`;
             await runStreamingAPI(messageText, aiResponseElement, true);
             chatSendBtn.disabled = false;
             chatInput.focus();
